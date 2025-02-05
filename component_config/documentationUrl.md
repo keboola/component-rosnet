@@ -1,0 +1,1 @@
+https://github.com/keboola/component-rosnet/blob/master/README.md
