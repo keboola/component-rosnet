@@ -1,30 +1,26 @@
 """
 Keboola Extractor for Rosnet API
 """
-import csv
-from datetime import datetime
-
 import os
 import logging
 
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
 from keboola.http_client import HttpClient
-
-from configuration import Configuration
 from configuration import Configuration, ENDPOINT_GROUPS
 from api_client import RosnetClient, BASE_URL
 
 
 class Component(ComponentBase):
     """
-        Extends base class for general Python components. Initializes the CommonInterface
-        and performs configuration validation.
+        Extends base class for general Python components.
+        Initializes the CommonInterface and performs configuration validation.
 
-        For easier debugging the data folder is picked up by default from `../data` path,
-        relative to working directory.
+        For easier debugging the data folder is picked up by default
+        from `../data` path, relative to working directory.
 
-        If `debug` parameter is present in the `config.json`, the default logger is set to verbose DEBUG mode.
+        If `debug` parameter is present in the `config.json`,
+        the default logger is set to verbose DEBUG mode.
     """
 
     def __init__(self):
@@ -50,13 +46,13 @@ class Component(ComponentBase):
 
             logging.info("Data extraction complete")
 
+
 """
 Main entrypoint
 """
 if __name__ == "__main__":
     try:
         comp = Component()
-        # this triggers the run method by default and is controlled by the configuration.action parameter
         comp.execute_action()
     except UserException as exc:
         logging.exception(exc)

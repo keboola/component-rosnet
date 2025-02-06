@@ -3,13 +3,12 @@ import csv
 import os
 
 from keboola.component import UserException
-from pydantic import BaseModel
-from typing import Optional, Dict, List, Any
+from typing import Any
 from keboola.http_client import HttpClient
-from keboola.component.base import CommonInterface
 from configuration import Configuration, ENDPOINT_GROUPS
 
 BASE_URL = "https://api.rosnet.com"
+
 
 class RosnetClient:
     """Client for Rosnet API"""
@@ -17,9 +16,15 @@ class RosnetClient:
     def __init__(self, config: Configuration, http_client: HttpClient):
         self.config = config
         self.http_client = http_client
-        self.auth_header = {"Authorization": f"Basic {config.authentication.get_auth_token}"}
+        self.auth_header = {
+            "Authorization": f"Basic {config.authentication.get_auth_token}"
+        }
 
-    def build_query_params(self, group_name: str, endpoint_name: str) -> list[dict]:
+    def build_query_params(
+        self,
+        group_name: str,
+        endpoint_name: str
+    ) -> list[dict]:
         """Constructs query parameters dynamically based on user config"""
         group = ENDPOINT_GROUPS.get(group_name)
         if not group:
@@ -27,7 +32,9 @@ class RosnetClient:
 
         endpoint = group.get(endpoint_name)
         if not endpoint:
-            raise UserException(f"Unknown endpoint: {endpoint_name} in group: {group_name}")
+            raise UserException(
+                f"Unknown endpoint: {endpoint_name} in group: {group_name}"
+            )
 
         base_params = {}
         multi_requests = []
@@ -46,43 +53,55 @@ class RosnetClient:
 
         return multi_requests if multi_requests else [base_params]
 
-
-    def fetch_paginated_data(self, group: str, endpoint: str) -> list[dict[str, Any]]:
+    def fetch_paginated_data(
+        self,
+        group: str,
+        endpoint: str
+    ) -> list[dict[str, Any]]:
         """Fetches paginated data from Rosnet API"""
         url = f"{ENDPOINT_GROUPS[group][endpoint].path}"
         all_data = []
 
         for params in self.build_query_params(group, endpoint):
             if not isinstance(params, dict):
-                raise UserException(f"Query parameters should be a dictionary, got {type(params)}")
+                raise UserException(
+                    f"Query parameters should be a dictionary, "
+                    f"got {type(params)}"
+                )
 
             cursor = None
             while True:
                 if cursor:
                     params["cursor"] = str(cursor)
 
-                params["limit"] = limit = self.config.sync_options.api_limit
+                params["limit"] = self.config.sync_options.api_limit
 
-                response = self.http_client.get_raw(url, params=params, headers=self.auth_header)
+                response = self.http_client.get_raw(
+                    url,
+                    params=params,
+                    headers=self.auth_header
+                )
 
                 try:
                     response_data = response.json()
                 except ValueError:
-                    raise UserException(f"Failed to parse JSON response from {url}")
+                    raise UserException(
+                        f"Failed to parse JSON response from {url}"
+                    )
 
                 if not isinstance(response_data, list):
                     raise UserException(
-                        f"Unexpected response format from {url}: Expected list, got {type(response_data)}")
+                        f"Unexpected response format from {url}: "
+                        f"Expected list, got {type(response_data)}"
+                    )
 
                 all_data.extend(response_data)
-
                 cursor = response.headers.get("cursor")
 
                 if not cursor:
                     break
 
         return all_data
-
 
     def extract_and_save(self, group: str, endpoint: str, output_dir: str):
         """Fetches data from an API endpoint and writes it to CSV"""

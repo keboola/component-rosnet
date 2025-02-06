@@ -2,8 +2,12 @@ import base64
 import logging
 from typing import Optional, List
 from datetime import date
-from pydantic import BaseModel, Field, ValidationError, field_validator, computed_field
-from keboola.component.exceptions import UserException
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator
+)
+
 
 class EndpointConfig(BaseModel):
     path: str
@@ -27,6 +31,7 @@ ENDPOINT_GROUPS = {
     }
 }
 
+
 class Authentication(BaseModel):
     api_user: str
     api_password: str = Field(alias="#api_password")
@@ -44,18 +49,63 @@ class Authentication(BaseModel):
 
 
 class SyncOptions(BaseModel):
-    mode: str = Field(..., description="Sync mode must be 'full' or 'incremental'")
-    datasets: list[str] = Field(default = [], description="List of datasets to fetch, e.g. ['general']")
-    date_from: str = Field(default="2020-01-01", description="Start date, defaults to '2020-01-01' if not provided")
-    date_to: str = Field(default_factory=lambda: str(date.today()), description="End date, defaults to today")
-    location_ids: Optional[List[int]] = Field(None, description="List of location IDs to filter data")
-    api_limit: int = Field(default=100, description="Number of records per request, defaults to 100 if not specified")
+    mode: str = Field(
+        default="full",
+        description=(
+            "Sync mode must be 'full' or 'incremental', "
+            "defaults to 'full' if not specified"
+        )
+    )
+    datasets: list[str] = Field(
+        default=[],
+        description="List of datasets to fetch, e.g. ['general']"
+    )
+    date_from: str = Field(
+        default="2020-01-01",
+        description="Start date, defaults to '2020-01-01' if not provided"
+    )
+    date_to: str = Field(
+        default_factory=lambda: str(date.today()),
+        description="End date, defaults to today"
+    )
+    location_ids: Optional[List[int]] = Field(
+        None,
+        description="List of location IDs to filter data"
+    )
+    api_limit: int = Field(
+        default=100,
+        description=(
+            "Number of records per request, "
+            "defaults to 100 if not specified"
+        )
+    )
 
     @field_validator("mode")
     def validate_mode(cls, value: str) -> str:
         allowed_values = {"full", "incremental"}
         if value not in allowed_values:
-            raise ValueError(f"sync_mode must be one of {allowed_values}, got '{value}'")
+            raise ValueError(
+                f"sync_mode must be one of {allowed_values}, got '{value}'"
+            )
+        return value
+
+    @field_validator("datasets")
+    def validate_datasets(cls, value: List[str]) -> List[str]:
+        supported_values = {"general"}
+
+        if not isinstance(value, list):
+            raise ValueError("datasets must be a list of strings")
+
+        invalid_values = [
+            dataset for dataset in value if dataset not in supported_values
+        ]
+
+        if invalid_values:
+            raise ValueError(
+                f"Invalid dataset(s) {invalid_values}. "
+                f"Supported values: {supported_values}"
+            )
+
         return value
 
     @field_validator("date_from", "date_to")
@@ -63,17 +113,21 @@ class SyncOptions(BaseModel):
         try:
             date.fromisoformat(value)
         except ValueError:
-            raise ValueError(f"Invalid date format for {value}, expected 'YYYY-MM-DD'")
+            raise ValueError(
+                f"Invalid date format for {value}, expected 'YYYY-MM-DD'"
+            )
         return value
 
     @property
     def is_incremental(self) -> bool:
         return self.mode == "incremental"
 
+
 class Configuration(BaseModel):
     authentication: Authentication
     sync_options: SyncOptions
     debug: bool = False
+
 
 def __init__(self, **data):
     if self.debug:

@@ -1,19 +1,78 @@
 {
   "type": "object",
-  "title": "extractor configuration",
-  "required": [
-    "print_hello"
-  ],
+  "title": "Extractor Configuration",
+  "required": ["authentication", "sync_options"],
   "properties": {
-    "print_hello": {
-      "type": "boolean",
-      "title": "Print Hello",
-      "propertyOrder": 1
+    "authentication": {
+      "type": "object",
+      "title": "Authentication",
+      "required": ["api_user", "#api_password"],
+      "properties": {
+        "api_user": {
+          "type": "string",
+          "title": "API Username",
+          "propertyOrder": 1
+        },
+        "#api_password": {
+          "type": "string",
+          "title": "API Password",
+          "propertyOrder": 2
+        }
+      }
+    },
+    "sync_options": {
+      "type": "object",
+      "title": "Sync Options",
+      "required": ["datasets"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "title": "Sync Mode",
+          "enum": ["full", "incremental"],
+          "default": "full",
+          "description": "Sync mode must be 'full' or 'incremental'. Defaults to 'full' if not specified.",
+          "propertyOrder": 1
+        },
+        "datasets": {
+          "type": "array",
+          "title": "Datasets",
+          "items": {
+            "type": "string",
+            "enum": ["general"]
+          },
+          "description": "List of datasets to fetch. Currently, only 'general' is supported.",
+          "propertyOrder": 2
+        },
+        "date_from": {
+          "type": "string",
+          "format": "date",
+          "title": "Start Date",
+          "description": "Start date in 'YYYY-MM-DD' format.",
+          "propertyOrder": 3
+        },
+        "date_to": {
+          "type": "string",
+          "format": "date",
+          "title": "End Date",
+          "description": "End date in 'YYYY-MM-DD' format. Defaults to today if not provided.",
+          "propertyOrder": 4
+        },
+        "location_ids": {
+          "type": "array",
+          "title": "Location IDs",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Optional list of location IDs to filter data.",
+          "propertyOrder": 5
+        }
+      }
     },
     "debug": {
       "type": "boolean",
-      "title": "Debug",
-      "propertyOrder": 2
+      "title": "Debug Mode",
+      "default": false,
+      "propertyOrder": 3
     }
   }
 }
