@@ -1,15 +1,19 @@
 """
-Template Component main class.
-
+Keboola Extractor for Rosnet API
 """
 import csv
 from datetime import datetime
+
+import os
 import logging
 
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
+from keboola.http_client import HttpClient
 
 from configuration import Configuration
+from configuration import Configuration, ENDPOINT_GROUPS
+from api_client import RosnetClient, BASE_URL
 
 
 class Component(ComponentBase):
@@ -30,62 +34,24 @@ class Component(ComponentBase):
         """
         Main execution code
         """
+        config = Configuration(**self.configuration.parameters)
+        http_client = HttpClient(BASE_URL)
+        client = RosnetClient(config, http_client)
 
-        # ####### EXAMPLE TO REMOVE
-        # check for missing configuration parameters
-        params = Configuration(**self.configuration.parameters)
+        output_dir = os.path.join(self.configuration.data_dir, "out", "tables")
+        os.makedirs(output_dir, exist_ok=True)
 
-        # Access parameters in configuration
-        if params.print_hello:
-            logging.info("Hello World")
+        for group in config.sync_options.datasets:
+            if group not in ENDPOINT_GROUPS:
+                raise UserException(f"Invalid dataset group: {group}")
 
-        # get input table definitions
-        input_tables = self.get_input_tables_definitions()
-        for table in input_tables:
-            logging.info(f'Received input table: {table.name} with path: {table.full_path}')
+            for endpoint in ENDPOINT_GROUPS[group]:
+                client.extract_and_save(group, endpoint, output_dir)
 
-        if len(input_tables) == 0:
-            raise UserException("No input tables found")
-
-        # get last state data/in/state.json from previous run
-        previous_state = self.get_state_file()
-        logging.info(previous_state.get('some_parameter'))
-
-        # Create output table (Table definition - just metadata)
-        table = self.create_out_table_definition('output.csv', incremental=True, primary_key=['timestamp'])
-
-        # get file path of the table (data/out/tables/Features.csv)
-        out_table_path = table.full_path
-        logging.info(out_table_path)
-
-        # Add timestamp column and save into out_table_path
-        input_table = input_tables[0]
-        with (open(input_table.full_path, 'r') as inp_file,
-              open(table.full_path, mode='wt', encoding='utf-8', newline='') as out_file):
-            reader = csv.DictReader(inp_file)
-
-            columns = list(reader.fieldnames)
-            # append timestamp
-            columns.append('timestamp')
-
-            # write result with column added
-            writer = csv.DictWriter(out_file, fieldnames=columns)
-            writer.writeheader()
-            for in_row in reader:
-                in_row['timestamp'] = datetime.now().isoformat()
-                writer.writerow(in_row)
-
-        # Save table manifest (output.csv.manifest) from the Table definition
-        self.write_manifest(table)
-
-        # Write new state - will be available next run
-        self.write_state_file({"some_state_parameter": "value"})
-
-        # ####### EXAMPLE TO REMOVE END
-
+            logging.info("Data extraction complete")
 
 """
-        Main entrypoint
+Main entrypoint
 """
 if __name__ == "__main__":
     try:
