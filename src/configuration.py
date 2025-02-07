@@ -1,7 +1,7 @@
 import base64
 import logging
 from typing import Optional, List
-from datetime import date
+# from datetime import date
 from pydantic import (
     BaseModel,
     Field,
@@ -28,6 +28,12 @@ ENDPOINT_GROUPS = {
             path="/general/dayparts",
             query_params={}
         )
+    },
+    "food": {
+        "products": EndpointConfig(
+            path="/food/products",
+            query_params={}
+        )
     }
 }
 
@@ -48,30 +54,26 @@ class Authentication(BaseModel):
         return base64.b64encode(credentials.encode()).decode()
 
 
-class SyncOptions(BaseModel):
-    mode: str = Field(
-        default="full",
-        description=(
-            "Sync mode must be 'full' or 'incremental', "
-            "defaults to 'full' if not specified"
-        )
+class Location(BaseModel):
+    location_ids: Optional[List[int]] = Field(
+        None,
+        description="List of location IDs (Optional)"
     )
+
+
+class SyncOptions(BaseModel):
     datasets: list[str] = Field(
         default=[],
         description="List of datasets to fetch, e.g. ['general']"
     )
-    date_from: str = Field(
-        default="2020-01-01",
-        description="Start date, defaults to '2020-01-01' if not provided"
-    )
-    date_to: str = Field(
-        default_factory=lambda: str(date.today()),
-        description="End date, defaults to today"
-    )
-    location_ids: Optional[List[int]] = Field(
-        None,
-        description="List of location IDs to filter data"
-    )
+    # date_from: str = Field(
+    #     default="2020-01-01",
+    #     description="Start date, defaults to '2020-01-01' if not provided"
+    # )
+    # date_to: str = Field(
+    #     default_factory=lambda: str(date.today()),
+    #     description="End date, defaults to today"
+    # )
     api_limit: int = Field(
         default=100,
         description=(
@@ -80,18 +82,9 @@ class SyncOptions(BaseModel):
         )
     )
 
-    @field_validator("mode")
-    def validate_mode(cls, value: str) -> str:
-        allowed_values = {"full", "incremental"}
-        if value not in allowed_values:
-            raise ValueError(
-                f"sync_mode must be one of {allowed_values}, got '{value}'"
-            )
-        return value
-
     @field_validator("datasets")
     def validate_datasets(cls, value: List[str]) -> List[str]:
-        supported_values = {"general"}
+        supported_values = {"general", "food"}
 
         if not isinstance(value, list):
             raise ValueError("datasets must be a list of strings")
@@ -108,23 +101,20 @@ class SyncOptions(BaseModel):
 
         return value
 
-    @field_validator("date_from", "date_to")
-    def validate_dates(cls, value: str) -> str:
-        try:
-            date.fromisoformat(value)
-        except ValueError:
-            raise ValueError(
-                f"Invalid date format for {value}, expected 'YYYY-MM-DD'"
-            )
-        return value
-
-    @property
-    def is_incremental(self) -> bool:
-        return self.mode == "incremental"
+    # @field_validator("date_from", "date_to")
+    # def validate_dates(cls, value: str) -> str:
+    #     try:
+    #         date.fromisoformat(value)
+    #     except ValueError:
+    #         raise ValueError(
+    #             f"Invalid date format for {value}, expected 'YYYY-MM-DD'"
+    #         )
+    #     return value
 
 
 class Configuration(BaseModel):
     authentication: Authentication
+    # location: Location
     sync_options: SyncOptions
     debug: bool = False
 

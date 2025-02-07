@@ -25,46 +25,15 @@
       "title": "Sync Options",
       "required": ["datasets"],
       "properties": {
-        "mode": {
-          "type": "string",
-          "title": "Sync Mode",
-          "enum": ["full", "incremental"],
-          "default": "full",
-          "description": "Sync mode must be 'full' or 'incremental'. Defaults to 'full' if not specified.",
-          "propertyOrder": 1
-        },
         "datasets": {
           "type": "array",
           "title": "Datasets",
           "items": {
             "type": "string",
-            "enum": ["general"]
+            "enum": ["general", "food"]
           },
-          "description": "List of datasets to fetch. Currently, only 'general' is supported.",
-          "propertyOrder": 2
-        },
-        "date_from": {
-          "type": "string",
-          "format": "date",
-          "title": "Start Date",
-          "description": "Start date in 'YYYY-MM-DD' format.",
+          "description": "List of datasets to fetch. Only 'general' and 'food' are supported in this version.",
           "propertyOrder": 3
-        },
-        "date_to": {
-          "type": "string",
-          "format": "date",
-          "title": "End Date",
-          "description": "End date in 'YYYY-MM-DD' format. Defaults to today if not provided.",
-          "propertyOrder": 4
-        },
-        "location_ids": {
-          "type": "array",
-          "title": "Location IDs",
-          "items": {
-            "type": "integer"
-          },
-          "description": "Optional list of location IDs to filter data.",
-          "propertyOrder": 5
         }
       }
     },
@@ -72,7 +41,7 @@
       "type": "boolean",
       "title": "Debug Mode",
       "default": false,
-      "propertyOrder": 3
+      "propertyOrder": 4
     }
   }
 }

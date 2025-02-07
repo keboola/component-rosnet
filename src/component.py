@@ -11,6 +11,14 @@ from configuration import Configuration, ENDPOINT_GROUPS
 from api_client import RosnetClient, BASE_URL
 
 
+PRIMARY_KEYS = {
+    "food_products": ["ProductId", "ProductDetailId"],
+    "general_dayparts": ["Id"],
+    "general_employees": ["Id"],
+    "general_locations": ["Id"],
+}
+
+
 class Component(ComponentBase):
     """
         Extends base class for general Python components.
@@ -25,6 +33,21 @@ class Component(ComponentBase):
 
     def __init__(self):
         super().__init__()
+
+    def create_keboola_manifest(self, file_name, dataset_name):
+        """
+        Generates a Keboola manifest file for the extracted dataset.
+        """
+        output_table = self.create_out_table_definition(
+            file_name,
+            primary_key=PRIMARY_KEYS.get(dataset_name, []),
+            incremental=True,
+            destination=f"out.c-data.{dataset_name}",
+        )
+
+        # Write the manifest file
+        self.write_manifest(output_table)
+        logging.info(f"Manifest created for {file_name}")
 
     def run(self):
         """
@@ -42,7 +65,11 @@ class Component(ComponentBase):
                 raise UserException(f"Invalid dataset group: {group}")
 
             for endpoint in ENDPOINT_GROUPS[group]:
+                file_name = f"{endpoint}.csv"
+
                 client.extract_and_save(group, endpoint, output_dir)
+
+                self.create_keboola_manifest(file_name, endpoint)
 
             logging.info("Data extraction complete")
 
