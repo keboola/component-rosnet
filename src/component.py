@@ -65,7 +65,7 @@ class Component(ComponentBase):
                 raise UserException(f"Invalid dataset group: {group}")
 
             for endpoint in ENDPOINT_GROUPS[group]:
-                file_name = f"{endpoint}.csv"
+                file_name = f"{group}_{endpoint}.csv"
 
                 client.extract_and_save(group, endpoint, output_dir)
 

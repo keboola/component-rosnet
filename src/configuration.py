@@ -30,6 +30,30 @@ ENDPOINT_GROUPS = {
         )
     },
     "food": {
+        "accounts": EndpointConfig(
+            path="/food/definitions/accounts",
+            query_params={}
+        ),
+        "account_categories": EndpointConfig(
+            path="/food/definitions/acctCategories",
+            query_params={}
+        ),
+        "vendors": EndpointConfig(
+            path="/food/definitions/vendors",
+            query_params={}
+        ),
+        "transaction_types": EndpointConfig(
+            path="/food/definitions/transactionTypes",
+            query_params={}
+        ),
+        "inventory_status_types": EndpointConfig(
+            path="/food/definitions/invStatusTypes",
+            query_params={}
+        ),
+        "product_measure_units": EndpointConfig(
+            path="/food/definitions/productUOMs",
+            query_params={}
+        ),
         "products": EndpointConfig(
             path="/food/products",
             query_params={}
