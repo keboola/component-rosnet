@@ -34,6 +34,20 @@
           },
           "description": "List of datasets to fetch. Only 'general' and 'food' are supported in this version.",
           "propertyOrder": 3
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date",
+          "title": "Start Date",
+          "description": "Optional start date for data synchronization (YYYY-MM-DD).",
+          "propertyOrder": 4
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date",
+          "title": "End Date",
+          "description": "Optional end date for data synchronization (YYYY-MM-DD).",
+          "propertyOrder": 5
         }
       }
     },

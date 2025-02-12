@@ -103,7 +103,7 @@ class RosnetClient:
 
         return all_data
 
-    def extract_and_save(self, group: str, endpoint: str, output_dir: str):
+    def extract_and_save(self, group: str, endpoint: str, file_path: str):
         """Fetches data from an API endpoint and writes it to CSV"""
         logging.info(f"Fetching {endpoint} from {group} dataset")
         data = self.fetch_paginated_data(group, endpoint)
@@ -112,10 +112,13 @@ class RosnetClient:
             logging.info(f"No data found for {group}/{endpoint}")
             return
 
-        output_file = os.path.join(output_dir, f"{group}_{endpoint}.csv")
-        logging.info(f"Saving {len(data)} records to {output_file}")
+        logging.info(f"Saving {len(data)} records to {file_path}")
+        self._save_to_csv(file_path, data)
 
-        with open(output_file, mode="w", newline="", encoding="utf-8") as f:
+    @staticmethod
+    def _save_to_csv(file_path: str, data: list[dict]):
+        """Helper method to write data to CSV file"""
+        with open(file_path, mode="w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=data[0].keys())
             writer.writeheader()
             writer.writerows(data)

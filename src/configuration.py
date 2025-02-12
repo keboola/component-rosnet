@@ -1,5 +1,6 @@
 import base64
 import logging
+from datetime import date
 from typing import Optional, List
 # from datetime import date
 from pydantic import (
@@ -90,14 +91,14 @@ class SyncOptions(BaseModel):
         default=[],
         description="List of datasets to fetch, e.g. ['general']"
     )
-    # date_from: str = Field(
-    #     default="2020-01-01",
-    #     description="Start date, defaults to '2020-01-01' if not provided"
-    # )
-    # date_to: str = Field(
-    #     default_factory=lambda: str(date.today()),
-    #     description="End date, defaults to today"
-    # )
+    date_from: str = Field(
+        default="2020-01-01",
+        description="Start date, defaults to '2020-01-01' if not provided"
+    )
+    date_to: str = Field(
+        default_factory=lambda: str(date.today()),
+        description="End date, defaults to today"
+    )
     api_limit: int = Field(
         default=100,
         description=(
@@ -125,15 +126,15 @@ class SyncOptions(BaseModel):
 
         return value
 
-    # @field_validator("date_from", "date_to")
-    # def validate_dates(cls, value: str) -> str:
-    #     try:
-    #         date.fromisoformat(value)
-    #     except ValueError:
-    #         raise ValueError(
-    #             f"Invalid date format for {value}, expected 'YYYY-MM-DD'"
-    #         )
-    #     return value
+    @field_validator("date_from", "date_to")
+    def validate_dates(cls, value: str) -> str:
+        try:
+            date.fromisoformat(value)
+        except ValueError:
+            raise ValueError(
+                f"Invalid date format for {value}, expected 'YYYY-MM-DD'"
+            )
+        return value
 
 
 class Configuration(BaseModel):
