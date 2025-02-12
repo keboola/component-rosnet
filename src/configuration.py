@@ -79,13 +79,6 @@ class Authentication(BaseModel):
         return base64.b64encode(credentials.encode()).decode()
 
 
-class Location(BaseModel):
-    location_ids: Optional[List[int]] = Field(
-        None,
-        description="List of location IDs (Optional)"
-    )
-
-
 class SyncOptions(BaseModel):
     datasets: list[str] = Field(
         default=[],
@@ -98,6 +91,10 @@ class SyncOptions(BaseModel):
     date_to: str = Field(
         default_factory=lambda: str(date.today()),
         description="End date, defaults to today"
+    )
+    location_ids: Optional[List[int]] = Field(
+        None,
+        description="List of location IDs (Optional)"
     )
     api_limit: int = Field(
         default=100,
@@ -139,7 +136,6 @@ class SyncOptions(BaseModel):
 
 class Configuration(BaseModel):
     authentication: Authentication
-    # location: Location
     sync_options: SyncOptions
     debug: bool = False
 

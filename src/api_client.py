@@ -1,6 +1,5 @@
 import logging
 import csv
-import os
 
 from keboola.component import UserException
 from typing import Any
@@ -36,22 +35,25 @@ class RosnetClient:
                 f"Unknown endpoint: {endpoint_name} in group: {group_name}"
             )
 
-        base_params = {}
+        base_params = {
+            key: str(getattr(self.config.sync_options, value))
+            for key, value in endpoint.query_params.items()
+            if not isinstance(getattr(self.config.sync_options, value, None), list)
+        }
         multi_requests = []
 
         for key, value in endpoint.query_params.items():
             param_value = getattr(self.config.sync_options, value, None)
 
-            if param_value:
-                if isinstance(param_value, list):
-                    for single_value in param_value:
-                        request_params = base_params.copy()
-                        request_params[key] = str(single_value)
-                        multi_requests.append(request_params)
-                else:
-                    base_params[key] = str(param_value)
+            if isinstance(param_value, list):
+                for single_value in param_value:
+                    request_params = base_params.copy()
+                    request_params[key] = str(single_value)
+                    multi_requests.append(request_params)
+            elif param_value:
+                base_params[key] = str(param_value)
 
-        return multi_requests if multi_requests else [base_params]
+        return multi_requests if multi_requests else ([base_params] if base_params else [{}])
 
     def fetch_paginated_data(
         self,
@@ -62,15 +64,13 @@ class RosnetClient:
         url = f"{ENDPOINT_GROUPS[group][endpoint].path}"
         all_data = []
 
-        for params in self.build_query_params(group, endpoint):
-            if not isinstance(params, dict):
-                raise UserException(
-                    f"Query parameters should be a dictionary, "
-                    f"got {type(params)}"
-                )
+        for request_params in self.build_query_params(group, endpoint):
+            if not isinstance(request_params, dict):
+                raise UserException(f"Query parameters should be a dictionary, got {type(request_params)}")
 
             cursor = None
             while True:
+                params = request_params.copy()
                 if cursor:
                     params["cursor"] = str(cursor)
 
@@ -85,20 +85,17 @@ class RosnetClient:
                 try:
                     response_data = response.json()
                 except ValueError:
-                    raise UserException(
-                        f"Failed to parse JSON response from {url}"
-                    )
+                    raise UserException(f"Failed to parse JSON response from {url}")
 
                 if not isinstance(response_data, list):
                     raise UserException(
-                        f"Unexpected response format from {url}: "
-                        f"Expected list, got {type(response_data)}"
+                        f"Unexpected response format from {url}: Expected list, got {type(response_data)}"
                     )
 
                 all_data.extend(response_data)
-                cursor = response.headers.get("cursor")
+                cursor = response.headers.get("cursor", None)  # Explicit None handling
 
-                if not cursor:
+                if not cursor:  # Ensure pagination stops correctly
                     break
 
         return all_data
