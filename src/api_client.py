@@ -1,0 +1,129 @@
+import logging
+import csv
+
+from keboola.component import UserException
+from typing import Any, List, Dict
+from keboola.http_client import HttpClient
+from configuration import Configuration, ENDPOINT_GROUPS
+from utils import generate_date_location_matrix
+
+BASE_URL = "https://api.rosnet.com"
+
+
+class RosnetClient:
+    """Client for Rosnet API"""
+
+    def __init__(self, config: Configuration, http_client: HttpClient):
+        self.config = config
+        self.http_client = http_client
+        self.auth_header = {
+            "Authorization": f"Basic {config.authentication.get_auth_token}"
+        }
+
+    def build_query_params(self, group_name: str, endpoint_name: str) -> List[Dict]:
+        """Constructs query parameters dynamically based on user config."""
+        group = ENDPOINT_GROUPS.get(group_name)
+        if not group:
+            raise UserException(f"Unknown group: {group_name}")
+
+        endpoint = group.get(endpoint_name)
+        if not endpoint:
+            raise UserException(f"Unknown endpoint: {endpoint_name} in group: {group_name}")
+
+        location_ids = self.config.sync_options.location_ids
+        date_from = self.config.sync_options.date_from
+        date_to = self.config.sync_options.date_to
+        generate_date_range = getattr(self.config.sync_options, "generate_date_range", False)
+
+        query_matrix = generate_date_location_matrix(date_from, date_to, location_ids, generate_date_range)
+
+        multi_requests = []
+        for row in query_matrix:
+            request_params = {}
+
+            for key, value in endpoint.query_params.items():
+                if value == "location_ids":
+                    request_params[key] = row["location_id"]
+                elif value == "start_date" and generate_date_range:
+                    request_params[key] = row["selected_date"]
+                elif value == "start_date_with_ts" and generate_date_range:
+                    request_params[key] = row["selected_date_with_ts"]
+                elif value == "start_date" and not generate_date_range:
+                    request_params[key] = row["date_from"]
+                elif value == "start_date_with_ts" and not generate_date_range:
+                    request_params[key] = row["date_from_with_ts"]
+                elif value == "end_date" and not generate_date_range:
+                    request_params[key] = row["date_to"]
+                elif value == "end_date_with_ts" and not generate_date_range:
+                    request_params[key] = row["date_to_with_ts"]
+
+            multi_requests.append(request_params)
+
+        return multi_requests
+
+    def fetch_paginated_data(
+        self,
+        group: str,
+        endpoint: str
+    ) -> list[dict[str, Any]]:
+        """Fetches paginated data from Rosnet API"""
+        url = f"{ENDPOINT_GROUPS[group][endpoint].path}"
+        all_data = []
+
+        for request_params in self.build_query_params(group, endpoint):
+            if not isinstance(request_params, dict):
+                raise UserException(f"Query parameters should be a dictionary, got {type(request_params)}")
+
+            cursor = None
+            while True:
+                params = request_params.copy()
+                if cursor:
+                    params["cursor"] = str(cursor)
+
+                params["limit"] = self.config.sync_options.api_limit
+
+                logging.debug(f"Executing API Call: {url} with Params: {params}")
+
+                response = self.http_client.get_raw(
+                    url,
+                    params=params,
+                    headers=self.auth_header
+                )
+
+                try:
+                    response_data = response.json()
+                except ValueError:
+                    raise UserException(f"Failed to parse JSON response from {url}")
+
+                if not isinstance(response_data, list):
+                    raise UserException(
+                        f"Unexpected response format from {url}: Expected list, got {type(response_data)}"
+                    )
+
+                all_data.extend(response_data)
+                cursor = response.headers.get("cursor", None)  # Explicit None handling
+
+                if not cursor:  # Ensure pagination stops correctly
+                    break
+
+        return all_data
+
+    def extract_and_save(self, group: str, endpoint: str, file_path: str):
+        """Fetches data from an API endpoint and writes it to CSV"""
+        logging.info(f"Fetching {endpoint} from {group} dataset")
+        data = self.fetch_paginated_data(group, endpoint)
+
+        if not data:
+            logging.info(f"No data found for {group}/{endpoint}")
+            return
+
+        logging.info(f"Saving {len(data)} records to {file_path}")
+        self._save_to_csv(file_path, data)
+
+    @staticmethod
+    def _save_to_csv(file_path: str, data: list[dict]):
+        """Helper method to write data to CSV file"""
+        with open(file_path, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=data[0].keys())
+            writer.writeheader()
+            writer.writerows(data)
