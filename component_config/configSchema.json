@@ -30,24 +30,39 @@
           "title": "Datasets",
           "items": {
             "type": "string",
-            "enum": ["general", "food"]
+            "enum": ["general", "sales", "food"]
           },
-          "description": "List of datasets to fetch. Only 'general' and 'food' are supported in this version.",
+          "description": "List of datasets to fetch. Supported values: 'general', and 'sales'.",
           "propertyOrder": 3
         },
-        "start_date": {
+        "location_ids": {
+          "type": "array",
+          "title": "Location IDs",
+          "items": {
+            "type": "number"
+          },
+          "description": "List of location IDs for which data should be fetched.",
+          "propertyOrder": 4
+        },
+        "date_from": {
           "type": "string",
           "format": "date",
           "title": "Start Date",
-          "description": "Optional start date for data synchronization (YYYY-MM-DD).",
-          "propertyOrder": 4
+          "description": "Optional start date for data synchronization (default 2020-01-01).",
+          "propertyOrder": 5
         },
-        "end_date": {
+        "date_to": {
           "type": "string",
           "format": "date",
           "title": "End Date",
-          "description": "Optional end date for data synchronization (YYYY-MM-DD).",
-          "propertyOrder": 5
+          "description": "Optional end date for data synchronization (default today()).",
+          "propertyOrder": 6
+        },
+        "generate_date_range": {
+          "type": "boolean",
+          "title": "Generate Date Range",
+          "description": "Generate date range between 'date_from' and 'date_to'. Default: 'false'.",
+          "propertyOrder": 7
         }
       }
     },
@@ -55,7 +70,7 @@
       "type": "boolean",
       "title": "Debug Mode",
       "default": false,
-      "propertyOrder": 4
+      "propertyOrder": 8
     }
   }
 }

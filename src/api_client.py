@@ -2,9 +2,10 @@ import logging
 import csv
 
 from keboola.component import UserException
-from typing import Any
+from typing import Any, List, Dict
 from keboola.http_client import HttpClient
 from configuration import Configuration, ENDPOINT_GROUPS
+from utils import generate_date_location_matrix
 
 BASE_URL = "https://api.rosnet.com"
 
@@ -19,41 +20,46 @@ class RosnetClient:
             "Authorization": f"Basic {config.authentication.get_auth_token}"
         }
 
-    def build_query_params(
-        self,
-        group_name: str,
-        endpoint_name: str
-    ) -> list[dict]:
-        """Constructs query parameters dynamically based on user config"""
+    def build_query_params(self, group_name: str, endpoint_name: str) -> List[Dict]:
+        """Constructs query parameters dynamically based on user config."""
         group = ENDPOINT_GROUPS.get(group_name)
         if not group:
             raise UserException(f"Unknown group: {group_name}")
 
         endpoint = group.get(endpoint_name)
         if not endpoint:
-            raise UserException(
-                f"Unknown endpoint: {endpoint_name} in group: {group_name}"
-            )
+            raise UserException(f"Unknown endpoint: {endpoint_name} in group: {group_name}")
 
-        base_params = {
-            key: str(getattr(self.config.sync_options, value))
-            for key, value in endpoint.query_params.items()
-            if not isinstance(getattr(self.config.sync_options, value, None), list)
-        }
+        location_ids = self.config.sync_options.location_ids
+        date_from = self.config.sync_options.date_from
+        date_to = self.config.sync_options.date_to
+        generate_date_range = getattr(self.config.sync_options, "generate_date_range", False)
+
+        query_matrix = generate_date_location_matrix(date_from, date_to, location_ids, generate_date_range)
+
         multi_requests = []
+        for row in query_matrix:
+            request_params = {}
 
-        for key, value in endpoint.query_params.items():
-            param_value = getattr(self.config.sync_options, value, None)
+            for key, value in endpoint.query_params.items():
+                if value == "location_ids":
+                    request_params[key] = row["location_id"]
+                elif value == "start_date" and generate_date_range:
+                    request_params[key] = row["selected_date"]
+                elif value == "start_date_with_ts" and generate_date_range:
+                    request_params[key] = row["selected_date_with_ts"]
+                elif value == "start_date" and not generate_date_range:
+                    request_params[key] = row["date_from"]
+                elif value == "start_date_with_ts" and not generate_date_range:
+                    request_params[key] = row["date_from_with_ts"]
+                elif value == "end_date" and not generate_date_range:
+                    request_params[key] = row["date_to"]
+                elif value == "end_date_with_ts" and not generate_date_range:
+                    request_params[key] = row["date_to_with_ts"]
 
-            if isinstance(param_value, list):
-                for single_value in param_value:
-                    request_params = base_params.copy()
-                    request_params[key] = str(single_value)
-                    multi_requests.append(request_params)
-            elif param_value:
-                base_params[key] = str(param_value)
+            multi_requests.append(request_params)
 
-        return multi_requests if multi_requests else ([base_params] if base_params else [{}])
+        return multi_requests
 
     def fetch_paginated_data(
         self,
@@ -75,6 +81,8 @@ class RosnetClient:
                     params["cursor"] = str(cursor)
 
                 params["limit"] = self.config.sync_options.api_limit
+
+                logging.debug(f"Executing API Call: {url} with Params: {params}")
 
                 response = self.http_client.get_raw(
                     url,

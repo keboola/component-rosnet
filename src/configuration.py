@@ -2,7 +2,6 @@ import base64
 import logging
 from datetime import date
 from typing import Optional, List
-# from datetime import date
 from pydantic import (
     BaseModel,
     Field,
@@ -58,8 +57,118 @@ ENDPOINT_GROUPS = {
         "products": EndpointConfig(
             path="/food/products",
             query_params={}
+        ),
+        "inventory_status": EndpointConfig(
+            path="/food/inventoryStatus",
+            query_params={
+                "locationId": "location_ids",
+                "startDate": "start_date"
+            }
+        ),
+        "inventory_products": EndpointConfig(
+            path="/food/inventoryProducts",
+            query_params={
+                "locationId": "location_ids",
+                "invPeriodDate": "start_date"
+            }
+        ),
+        "period_qfactor": EndpointConfig(
+            path="/food/periodQFactor",
+            query_params={
+                "locationId": "location_ids",
+                "invPeriodDate": "start_date"
+            }
+        ),
+        "product_purchases": EndpointConfig(
+            path="/food/productPurchases",
+            query_params={
+                "locationId": "location_ids",
+                "minPostDate": "start_date",
+                "maxPostDate": "end_date"
+            }
+        ),
+        "non_product_purchases": EndpointConfig(
+            path="/food/nonProductPurchases",
+            query_params={
+                "locationId": "location_ids",
+                "minPostDate": "start_date",
+                "maxPostDate": "end_date"
+            }
+        ),
+        "inventory_onhand_details": EndpointConfig(
+            path="/food/inventoryOnhandDetails",
+            query_params={
+                "locationId": "location_ids",
+                "businessDate": "start_date"
+            }
+        ),
+        "plate_costs": EndpointConfig(
+            path="/food/plateCosts",
+            query_params={
+                "locationId": "location_ids",
+                "invPeriodDate": "start_date"
+            }
         )
-    }
+    },
+    "sales": {
+        "checks": EndpointConfig(
+            path="/sales/checks",
+            query_params={
+                "locationId": "location_ids",
+                "businessDate": "start_date"
+            }
+        ),
+        "pos_departments": EndpointConfig(
+            path="/sales/definitions/posDepartments",
+            query_params={}
+        ),
+        "discount_categories": EndpointConfig(
+            path="/sales/definitions/discountCategories",
+            query_params={}
+        ),
+        "discounts": EndpointConfig(
+            path="/sales/definitions/discounts",
+            query_params={}
+        ),
+        # "drive_thru_stations": EndpointConfig(
+        #     path="/sales/definitions/driveThruStations",
+        #     query_params={}
+        # ),
+        # "items": EndpointConfig(
+        #     path="/sales/definitions/items",
+        #     query_params={
+        #         "minSoldDate": "start_date",
+        #     }
+        # ),
+        "major_categories": EndpointConfig(
+            path="/sales/definitions/majorCategories",
+            query_params={}
+        ),
+        "payment_categories": EndpointConfig(
+            path="/sales/definitions/paymentCategories",
+            query_params={}
+        ),
+        "pos_sources": EndpointConfig(
+            path="/sales/definitions/posSources",
+            query_params={}
+        ),
+        "revenue_centers": EndpointConfig(
+            path="/sales/definitions/revenueCenters",
+            query_params={}
+        ),
+        "sales_categories": EndpointConfig(
+            path="/sales/definitions/salesCategories",
+            query_params={}
+        ),
+        "tax_categories": EndpointConfig(
+            path="/sales/definitions/taxCategories",
+            query_params={}
+        ),
+        "void_categories": EndpointConfig(
+            path="/sales/definitions/voidCategories",
+            query_params={}
+        ),
+    },
 }
 
 
@@ -93,20 +202,24 @@ class SyncOptions(BaseModel):
         description="End date, defaults to today"
     )
     location_ids: Optional[List[int]] = Field(
-        None,
+        default=None,
         description="List of location IDs (Optional)"
     )
+    generate_date_range: bool = Field(
+        default=False,
+        description="generate date range between date_from and date_to, (defaults to False uses just date_from)"
+    )
     api_limit: int = Field(
-        default=100,
+        default=300,
         description=(
             "Number of records per request, "
-            "defaults to 100 if not specified"
+            "defaults to 300 if not specified"
         )
     )
 
     @field_validator("datasets")
     def validate_datasets(cls, value: List[str]) -> List[str]:
-        supported_values = {"general", "food"}
+        supported_values = {"general", "sales"}
 
         if not isinstance(value, list):
             raise ValueError("datasets must be a list of strings")
@@ -122,17 +235,6 @@ class SyncOptions(BaseModel):
             )
 
         return value
-
-    @field_validator("date_from", "date_to")
-    def validate_dates(cls, value: str) -> str:
-        try:
-            date.fromisoformat(value)
-        except ValueError:
-            raise ValueError(
-                f"Invalid date format for {value}, expected 'YYYY-MM-DD'"
-            )
-        return value
-
 
 class Configuration(BaseModel):
     authentication: Authentication

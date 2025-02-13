@@ -18,7 +18,7 @@ class ManifestManager:
 
     def get_primary_keys(self, dataset_name: str) -> list[str]:
         """Returns the primary keys for a given dataset."""
-        return self.PRIMARY_KEYS.get(dataset_name, [])
+        return self.PRIMARY_KEYS.get(dataset_name, ["Id"])
 
     def create_manifest(self, group: str, endpoint: str):
         """
