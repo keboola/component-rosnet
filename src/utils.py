@@ -3,9 +3,9 @@ from typing import List, Dict
 
 
 def generate_date_location_matrix(
-    date_from: str, 
-    date_to: str, 
-    location_ids: List[int], 
+    date_from: str,
+    date_to: str,
+    location_ids: List[int],
     generate_date_range: bool
 ) -> List[Dict[str, str]]:
     """Generates a matrix of location_id pairs with standard and timestamped date formats."""

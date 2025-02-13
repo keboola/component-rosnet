@@ -1,6 +1,7 @@
 import logging
 from keboola.component.base import ComponentBase
-from file_manager import FileManager, FileMetadata
+from file_manager import FileManager
+
 
 class ManifestManager:
     """Handles the generation of Keboola manifest files."""

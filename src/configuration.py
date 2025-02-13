@@ -236,6 +236,7 @@ class SyncOptions(BaseModel):
 
         return value
 
+
 class Configuration(BaseModel):
     authentication: Authentication
     sync_options: SyncOptions
